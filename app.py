@@ -39,15 +39,25 @@ df_selected = (
 df_selected = df_selected.groupby("date")["Total_coins"].sum().reset_index()
 df_selected = df_selected.sort_values("date")
 
-# 이벤트일 검증 (7일간 평균 대비 70% 이상 상승)
-df_selected["rolling_avg"] = df_selected["Total_coins"].rolling(window=7, center=True, min_periods=1).mean()
-df_selected["event_flag"] = df_selected["Total_coins"] > df_selected["rolling_avg"] * 1.5
+# 1) 이벤트일 검증 (7일간 평균 대비 threshold 배수)
+# 기존 df_selected["event_flag"] 계산부를 아래로 교체
+threshold = 1.7 if selected_title != "전체 콘텐츠" else 1.3
+df_selected["rolling_avg"] = (
+    df_selected["Total_coins"]
+    .rolling(window=7, center=True, min_periods=1)
+    .mean()
+)
+df_selected["event_flag"] = df_selected["Total_coins"] > df_selected["rolling_avg"] * threshold
 df_selected["weekday"] = df_selected["date"].dt.day_name()
+event_dates = df_selected[df_selected["event_flag"]]["date"].tolist()
 
-# 1) 이벤트 발생 요일 분포
+# 2) 이벤트 발생 요일 분포 (데이터가 없으면 안내 메시지)
 weekday_event_stats = df_selected[df_selected["event_flag"]]["weekday"].value_counts()
 st.subheader("🌟 이벤트 발생 요일 분포")
-st.bar_chart(weekday_event_stats)
+if not weekday_event_stats.empty:
+    st.bar_chart(weekday_event_stats)
+else:
+    st.info("🗒️ 전체 매출 기준 급등 이벤트(170% 이상) 또는 전체 콘텐츠 기준(130% 이상) 이벤트가 없습니다.\n임계치를 낮춰보세요.")
 
 # 2) 공휴일 중 이벤트 효과가 낮은 요일 분석
 merged = pd.merge(df_selected, holidays_fr.rename(columns={"ds": "date"}), how="inner", on="date")
