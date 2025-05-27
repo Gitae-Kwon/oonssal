@@ -5,7 +5,7 @@ from prophet import Prophet
 from datetime import timedelta
 from prophet.make_holidays import make_holidays_df
 
-# 해당 다음 2년간 프랭스 공휴일
+# 해당 다음 2년간 프랑스 공휴일
 holidays_fr = make_holidays_df(year_list=[2024, 2025], country="FR")
 
 # DB 연결
@@ -22,56 +22,60 @@ def load_data():
     df["date"] = pd.to_datetime(df["date"])
     return df
 
+# 데이터 로드
 df = load_data()
-st.title("📊 웹툰 매주 데이션 + 이벤트 통화 데스크")
+st.title("📊 웹툰 매출 데이터 + 이벤트 인사이트 대시보드")
 
-# 선택된 컨테츠 포함 데이터
-selected_title = st.selectbox("🔍 컨테츠 선택", sorted(df["Title"].unique()))
-df_selected = df[df["Title"] == selected_title].copy()
+# 콘텐츠 선택 (전체 포함)
+options = ["전체 콘텐츠"] + sorted(df["Title"].unique())
+selected_title = st.selectbox("🔍 콘텐츠 선택", options)
+
+# 선택 또는 전체 매출 데이터 준비
+df_selected = (
+    df.groupby("date")["Total_coins"].sum().reset_index()
+    if selected_title == "전체 콘텐츠"
+    else df[df["Title"] == selected_title][["date", "Total_coins"]]
+)
 df_selected = df_selected.groupby("date")["Total_coins"].sum().reset_index()
 df_selected = df_selected.sort_values("date")
 
-# 이벤트일 검증 (7일 가운 포함 평균 보다 70%이상)
+# 이벤트일 검증 (7일간 평균 대비 70% 이상 상승)
 df_selected["rolling_avg"] = df_selected["Total_coins"].rolling(window=7, center=True, min_periods=1).mean()
 df_selected["event_flag"] = df_selected["Total_coins"] > df_selected["rolling_avg"] * 1.7
 df_selected["weekday"] = df_selected["date"].dt.day_name()
-event_dates = df_selected[df_selected["event_flag"]]["date"].tolist()
 
-# 일주일 단위 통계
+# 1) 이벤트 발생 요일 분포
 weekday_event_stats = df_selected[df_selected["event_flag"]]["weekday"].value_counts()
 st.subheader("🌟 이벤트 발생 요일 분포")
 st.bar_chart(weekday_event_stats)
 
-# 프랭스 공휴일 + 통신 데이터 바이 메지
+# 2) 공휴일 중 이벤트 효과가 낮은 요일 분석
 merged = pd.merge(df_selected, holidays_fr.rename(columns={"ds": "date"}), how="inner", on="date")
 merged_weekday = merged[~merged["weekday"].isin(["Saturday", "Sunday"])]
 weak_holidays = merged_weekday[~merged_weekday["event_flag"]]
 weak_by_weekday = weak_holidays["weekday"].value_counts()
-
-st.subheader(":thinking_face: 저효율 이벤트 공휴일(국경일)요일")
+st.subheader("🤔 이벤트 효과가 낮았던 공휴일 요일 분포")
 st.bar_chart(weak_by_weekday)
 
-# 컨테츠 현황 시각화
+# 3) 최근 3개월 매출 추이
 recent = df_selected[df_selected["date"] >= df_selected["date"].max() - timedelta(days=90)]
-st.subheader(f"현재 {selected_title} 최근 3개월 매출 추이")
+sub_title = "전체" if selected_title == "전체 콘텐츠" else selected_title
+st.subheader(f"📈 '{sub_title}' 최근 3개월 매출 추이")
 st.line_chart(recent.set_index("date")["Total_coins"])
 
-# Prophet 예측
+# 4) Prophet 예측 (향후 7일)
 prophet_df = df_selected.rename(columns={"date": "ds", "Total_coins": "y"})
 model = Prophet()
 model.add_country_holidays(country_name="FR")
 model.fit(prophet_df)
-
 future = model.make_future_dataframe(periods=7)
 forecast = model.predict(future)
 future_7 = forecast[forecast["ds"] > df_selected["date"].max()]
-
-st.subheader("🔮 7일 가장 엄장 발생 예측")
+st.subheader("🔮 향후 7일 매출 예측")
 st.line_chart(future_7.set_index("ds")["yhat"])
 
-# 이벤트 예정일 선택기능
+# 5) 이벤트 예정일 선택 기능
 st.subheader("🗓 이벤트 예정일 체크")
-event_input = st.date_input("통화 가능성 있는 날짜 선택", [], format="YYYY-MM-DD", key="event_input")
-
+event_input = st.date_input("이벤트 가능성 있는 날짜 선택", [], format="YYYY-MM-DD", key="event_input")
 if event_input:
-    st.success(f"🚀 선택한 이벤트일: {event_input}")
+    st.success(f"🚀 선택된 이벤트일: {event_input}")
