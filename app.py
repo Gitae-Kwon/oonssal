@@ -55,6 +55,8 @@ else:
     future = model.make_future_dataframe(periods=7)
     forecast = model.predict(future)
 
-    # 마지막 30일 + 향후 7일만 시각화
-    plot_df = forecast[["ds", "yhat", "yhat_upper", "yhat_lower"]].tail(37).set_index("ds")
-    st.line_chart(plot_df[["yhat"]])
+    # ✅ 향후 7일만 필터링
+    future_7 = forecast[forecast["ds"] > df_selected["date"].max()]
+
+    st.subheader("🔮 매출 예측 (향후 7일)")
+    st.line_chart(future_7.set_index("ds")[["yhat"]])
