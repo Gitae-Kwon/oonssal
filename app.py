@@ -16,7 +16,7 @@ engine = create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{
 # 📥 데이터 불러오기
 @st.cache_data
 def load_data():
-    df = pd.read_sql("SELECT date, Title, Total_coins FROM fra_daily", con=engine)
+    df = pd.read_sql('SELECT date, "Title", "Total_coins" FROM fra_daily', con=engine)
     df["date"] = pd.to_datetime(df["date"])
     return df
 
