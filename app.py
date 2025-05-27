@@ -85,39 +85,39 @@ sub_title = "전체 콘텐츠" if selected_title == "전체 콘텐츠" else sele
 st.subheader(f"📈 '{sub_title}' 최근 3개월 매출 추이")
 st.line_chart(recent.set_index("date")["Total_coins"])
 
-# 4) Prophet 예측 (향후 30일)
+# 4) Prophet 예측 (향후 7일)
 prophet_df = df_selected.rename(columns={"date": "ds", "Total_coins": "y"})
 model = Prophet()
 model.add_country_holidays(country_name="FR")
 model.fit(prophet_df)
-
-future = model.make_future_dataframe(periods=30)
+future = model.make_future_dataframe(periods=7)
 forecast = model.predict(future)
+future_7 = forecast[forecast["ds"] > df_selected["date"].max()]
 
-# 과거 최대 날짜 기준으로 30일 미래만 필터
-today_max = df_selected["date"].max()
-future_30 = forecast[forecast["ds"] > today_max]
-
-st.subheader("🔮 향후 30일 매출 예측")
-st.line_chart(future_30.set_index("ds")["yhat"])
+st.subheader("🔮 향후 7일 매출 예측")
+st.line_chart(future_7.set_index("ds")["yhat"])
 
 # 5) 이벤트 예정일 선택 및 적용 기능
 st.subheader("🗓 이벤트 예정일 체크 및 적용")
+# 단일 날짜 선택으로 변경 (리스트 대신 date 객체 반환)
 event_input = st.date_input(
-    "이벤트 가능성 있는 날짜 선택", [], format="YYYY-MM-DD", key="event_input"
+    "이벤트 가능성 있는 날짜 선택", value=None, format="YYYY-MM-DD", key="event_input"
 )
 apply = st.button("이벤트 적용")
 if apply:
-    if event_input:
-        sel_date = event_input[0] if isinstance(event_input, list) else event_input
+    if event_input is not None:
+        sel_date = event_input  # 단일 date 객체
         weekday = sel_date.strftime("%A")
+        # 요일별 이벤트 발생 비율
         rate = event_rate_by_weekday.get(weekday, 0)
         st.write(f"📈 과거 {weekday} 이벤트 발생 비율: {rate:.1%}")
-        if sel_date in future_7["ds"].dt.date.tolist():
-            st.success(f"🚀 {sel_date}은 예측 기간(향후 7일)에 포함됩니다.")
+        # 예측 기간 포함 여부
+        future_dates = future_7["ds"].dt.date.tolist()
+        if sel_date in future_dates:
+            st.success(f"🚀 {sel_date}은 향후 7일 예측 기간에 포함됩니다.")
             # 예측 차트 갱신
             st.line_chart(future_7.set_index("ds")["yhat"])
         else:
-            st.warning("⚠️ 선택한 이벤트일이 향후 7일 예측 기간에 포함되지 않습니다.")
+            st.warning("⚠️ 선택한 날짜가 향후 예측 기간에 포함되지 않습니다.")
     else:
         st.warning("⚠️ 먼저 이벤트 가능일을 선택해주세요.")
