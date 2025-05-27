@@ -53,7 +53,7 @@ st.bar_chart(weak_by_weekday)
 
 # 컨테츠 현황 시각화
 recent = df_selected[df_selected["date"] >= df_selected["date"].max() - timedelta(days=90)]
-st.subheader(f"📉 현재 \"{selected_title}\" 최근 3개월 매출 추이")
+st.subheader(f"현재 {selected_title} 최근 3개월 매주")
 st.line_chart(recent.set_index("date")["Total_coins"])
 
 # Prophet 예측
