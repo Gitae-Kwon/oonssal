@@ -43,7 +43,7 @@ df_selected = df_selected.groupby("date")["Total_coins"].sum().reset_index()
 df_selected = df_selected.sort_values("date")
 
 # 이벤트 플래그: 7일 이동 평균 대비 threshold 배수
-threshold = 1.7 if selected_title != "전체 콘텐츠" else 1.3
+threshold = 1.7 if selected_title != "전체 콘텐츠" else 1.1
 df_selected["rolling_avg"] = (
     df_selected["Total_coins"].rolling(window=7, center=True, min_periods=1).mean()
 )
