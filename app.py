@@ -85,17 +85,21 @@ sub_title = "전체 콘텐츠" if selected_title == "전체 콘텐츠" else sele
 st.subheader(f"📈 '{sub_title}' 최근 3개월 매출 추이")
 st.line_chart(recent.set_index("date")["Total_coins"])
 
-# 4) Prophet 예측 (향후 7일)
+# 4) Prophet 예측 (향후 30일)
 prophet_df = df_selected.rename(columns={"date": "ds", "Total_coins": "y"})
 model = Prophet()
 model.add_country_holidays(country_name="FR")
 model.fit(prophet_df)
-future = model.make_future_dataframe(periods=7)
-forecast = model.predict(future)
-future_7 = forecast[forecast["ds"] > df_selected["date"].max()]
 
-st.subheader("🔮 향후 7일 매출 예측")
-st.line_chart(future_7.set_index("ds")["yhat"])
+future = model.make_future_dataframe(periods=30)
+forecast = model.predict(future)
+
+# 과거 최대 날짜 기준으로 30일 미래만 필터
+today_max = df_selected["date"].max()
+future_30 = forecast[forecast["ds"] > today_max]
+
+st.subheader("🔮 향후 30일 매출 예측")
+st.line_chart(future_30.set_index("ds")["yhat"])
 
 # 5) 이벤트 예정일 선택 및 적용 기능
 st.subheader("🗓 이벤트 예정일 체크 및 적용")
