@@ -41,7 +41,7 @@ df_selected = df_selected.sort_values("date")
 
 # 이벤트일 검증 (7일간 평균 대비 70% 이상 상승)
 df_selected["rolling_avg"] = df_selected["Total_coins"].rolling(window=7, center=True, min_periods=1).mean()
-df_selected["event_flag"] = df_selected["Total_coins"] > df_selected["rolling_avg"] * 1.7
+df_selected["event_flag"] = df_selected["Total_coins"] > df_selected["rolling_avg"] * 1.5
 df_selected["weekday"] = df_selected["date"].dt.day_name()
 
 # 1) 이벤트 발생 요일 분포
