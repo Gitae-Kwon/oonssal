@@ -39,7 +39,7 @@ event_dates = df_selected[df_selected["event_flag"]]["date"].tolist()
 
 # 일주일 단위 통계
 weekday_event_stats = df_selected[df_selected["event_flag"]]["weekday"].value_counts()
-st.subheader("🌟 이벤트 발생 일요일 분포")
+st.subheader("🌟 이벤트 발생 요일 분포")
 st.bar_chart(weekday_event_stats)
 
 # 프랭스 공휴일 + 통신 데이터 바이 메지
@@ -48,12 +48,12 @@ merged_weekday = merged[~merged["weekday"].isin(["Saturday", "Sunday"])]
 weak_holidays = merged_weekday[~merged_weekday["event_flag"]]
 weak_by_weekday = weak_holidays["weekday"].value_counts()
 
-st.subheader(":thinking_face: 가장 협조가 없어 보이는 공휴일의 일요")
+st.subheader(":thinking_face: 저효율 이벤트 공휴일(국경일)요일")
 st.bar_chart(weak_by_weekday)
 
 # 컨테츠 현황 시각화
 recent = df_selected[df_selected["date"] >= df_selected["date"].max() - timedelta(days=90)]
-st.subheader(f"현재 {selected_title} 최근 3개월 매주")
+st.subheader(f"📉 현재 \"{selected_title}\" 최근 3개월 매출 추이")
 st.line_chart(recent.set_index("date")["Total_coins"])
 
 # Prophet 예측
