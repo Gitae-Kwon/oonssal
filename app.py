@@ -70,7 +70,8 @@ df_pay_ev = pd.DataFrame({'weekday': weekdays_order,
                           'count': [pay_counts.get(d,0) for d in weekdays_order]})
 chart_pay = alt.Chart(df_pay_ev).mark_bar(color='blue').encode(
     x=alt.X('weekday:N', sort=weekdays_order, title='요일'),
-    y=alt.Y('count:Q', title='이벤트 횟수', scale=alt.Scale(domain=[0, df_pay_ev['count'].max()+1]))
+    y=alt.Y('count:Q', title='이벤트 횟수', scale=alt.Scale(domain=[0, df_pay_ev['count'].max()+1])),
+    tooltip=[alt.Tooltip('weekday:N', title='요일'), alt.Tooltip('count:Q', title='이벤트 횟수')]
 ).properties(height=250)
 st.altair_chart(chart_pay, use_container_width=True)
 
@@ -84,9 +85,20 @@ df_pay_ev['rate'] = pay_rates
 st.subheader("💹 결제 이벤트 발생 시 요일별 평균 증가율")
 chart_pay_rate = alt.Chart(df_pay_ev).mark_bar(color='cyan').encode(
     x=alt.X('weekday:N', sort=weekdays_order, title='요일'),
-    y=alt.Y('rate:Q', title='평균 증가 배수', scale=alt.Scale(domain=[0, df_pay_ev['rate'].max()*1.1]))
+    y=alt.Y('rate:Q', title='평균 증가 배수', scale=alt.Scale(domain=[0, df_pay_ev['rate'].max()*1.1])),
+    tooltip=[alt.Tooltip('weekday:N', title='요일'), alt.Tooltip('rate:Q', title='평균 증가 배수')]
 ).properties(height=250)
 st.altair_chart(chart_pay_rate, use_container_width=True)
+
+# 3) 이벤트 일별 결제 금액 (툴팁에 날짜·금액 표시)
+st.subheader("💥 이벤트 일별 결제 금액")
+event_days = df_pay[df_pay['event_flag']]
+chart_event_amount = alt.Chart(event_days).mark_bar(color='green').encode(
+    x=alt.X('date:T', title='날짜'),
+    y=alt.Y('amount:Q', title='결제 금액'),
+    tooltip=[alt.Tooltip('date:T', title='날짜'), alt.Tooltip('amount:Q', title='결제 금액')]
+).properties(height=300)
+st.altair_chart(chart_event_amount, use_container_width=True)
 
 # 3) 최근 3개월 추이
 st.subheader("📈 결제 매출 최근 3개월 추이")
