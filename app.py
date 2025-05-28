@@ -45,13 +45,14 @@ st.title("📊 웹툰 매출 & 결제 분석 대시보드 + 이벤트 인사이�
 options = ["전체 콘텐츠"] + sorted(coin_df["Title"].unique())
 selected_title = st.selectbox("🔍 콘텐츠 선택", options)
 
-# 1) 코인 매출: 이전 설정 유지
+# 1) 코인 매출: 데이터 준비
 if selected_title == "전체 콘텐츠":
     df_coin = coin_df.groupby("date")["Total_coins"].sum().reset_index()
 else:
     df_coin = coin_df[coin_df["Title"] == selected_title][["date", "Total_coins"]]
 
-df_coin = df_coin.groupby("date")["Total_coins"].sum().reset_index().sort_values("date")
+df_coin = df_coin.groupby("date")["Total_coins"].sum().reset_index()
+df_coin = df_coin.sort_values("date")
 
 # 코인 이벤트 임계치 입력 및 적용
 if "coin_thresh" not in st.session_state:
@@ -68,27 +69,27 @@ st.caption(f"현재 코인 이벤트 임계치: {int(coin_threshold*100)}%")
 
 # 코인 이벤트 검출
 df_coin["rolling_avg"] = df_coin["Total_coins"].rolling(window=7, center=True, min_periods=1).mean()
- df_coin["event_flag"] = df_coin["Total_coins"] > df_coin["rolling_avg"] * coin_threshold
- df_coin["weekday"] = df_coin["date"].dt.day_name()
+df_coin["event_flag"] = df_coin["Total_coins"] > df_coin["rolling_avg"] * coin_threshold
+df_coin["weekday"] = df_coin["date"].dt.day_name()
 
 # 코인 이벤트 발생 요일 분포
 weekdays_order = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 coin_stats = df_coin[df_coin["event_flag"]]["weekday"].value_counts()
 df_coin_ev = pd.DataFrame({
     'weekday': weekdays_order,
-    'count': [coin_stats.get(day,0) for day in weekdays_order]
+    'count': [coin_stats.get(day, 0) for day in weekdays_order]
 })
 df_coin_ev['negative'] = -df_coin_ev['count']
 chart_coin = alt.Chart(df_coin_ev).mark_bar(color='red').encode(
     x=alt.X('weekday:N', sort=weekdays_order, title='요일'),
-    y=alt.Y('negative:Q', axis=alt.Axis(title='이벤트 횟수'), scale=alt.Scale(domain=[-max(df_coin_ev['count'])-1,0]))
+    y=alt.Y('negative:Q', axis=alt.Axis(title='이벤트 횟수'), scale=alt.Scale(domain=[-max(df_coin_ev['count'])-1, 0]))
 ).properties(height=250)
 st.subheader("🌟 코인 이벤트 발생 요일 분포")
 st.altair_chart(chart_coin, use_container_width=True)
 
 # 최근 3개월 코인 매출 추이
 recent_coin = df_coin[df_coin["date"] >= df_coin["date"].max() - timedelta(days=90)]
-label_coin = "전체 콘텐츠" if selected_title=="전체 콘텐츠" else selected_title
+label_coin = "전체 콘텐츠" if selected_title == "전체 콘텐츠" else selected_title
 st.subheader(f"📈 '{label_coin}' 최근 3개월 코인 매출 추이")
 st.line_chart(recent_coin.set_index("date")["Total_coins"])
 
@@ -129,12 +130,12 @@ pay_df_sorted["weekday"] = pay_df_sorted["date"].dt.day_name()
 pay_stats = pay_df_sorted[pay_df_sorted["event_flag"]]["weekday"].value_counts()
 df_pay_ev = pd.DataFrame({
     'weekday': weekdays_order,
-    'count': [pay_stats.get(day,0) for day in weekdays_order]
+    'count': [pay_stats.get(day, 0) for day in weekdays_order]
 })
 df_pay_ev['negative'] = -df_pay_ev['count']
 chart_pay = alt.Chart(df_pay_ev).mark_bar(color='blue').encode(
     x=alt.X('weekday:N', sort=weekdays_order, title='요일'),
-    y=alt.Y('negative:Q', axis=alt.Axis(title='이벤트 횟수'), scale=alt.Scale(domain=[-max(df_pay_ev['count'])-1,0]))
+    y=alt.Y('negative:Q', axis=alt.Axis(title='이벤트 횟수'), scale=alt.Scale(domain=[-max(df_pay_ev['count'])-1, 0]))
 ).properties(height=250)
 st.subheader("🌟 결제 이벤트 발생 요일 분포")
 st.altair_chart(chart_pay, use_container_width=True)
@@ -144,7 +145,7 @@ recent_pay = pay_df[pay_df["date"] >= pay_df["date"].max() - timedelta(days=90)]
 st.subheader("📈 결제 매출 최근 3개월 추이")
 st.line_chart(recent_pay.set_index("date")["amount"])
 
-# 결제 예측 (향후 7일)
+# 결제 예측
 prophet_pay = pay_df.rename(columns={"date":"ds","amount":"y"})
 model_pay = Prophet()
 model_pay.add_country_holidays(country_name="FR")
@@ -166,10 +167,10 @@ if apply and event_input:
     wd = sel.strftime("%A")
     # 코인 비율
     total_coin_days = df_coin[df_coin['weekday'] == wd].shape[0]
-    coin_rate = coin_stats.get(wd,0) / total_coin_days if total_coin_days>0 else 0
+    coin_rate = coin_stats.get(wd, 0) / total_coin_days if total_coin_days > 0 else 0
     # 결제 비율
     total_pay_days = pay_df_sorted[pay_df_sorted['weekday'] == wd].shape[0]
-    pay_rate = pay_stats.get(wd,0) / total_pay_days if total_pay_days>0 else 0
+    pay_rate = pay_stats.get(wd, 0) / total_pay_days if total_pay_days > 0 else 0
     st.write(f"📈 과거 {wd} 이벤트 비율 - 코인: {coin_rate:.1%}, 결제: {pay_rate:.1%}")
     # 예측 기간 포함 여부
     in_coin = sel in coin_fut7['ds'].dt.date.tolist()
