@@ -165,9 +165,9 @@ df_coin_sel['weekday'] = df_coin_sel['date'].dt.day_name()
 coin_counts = df_coin_sel[df_coin_sel['event_flag']]['weekday'].value_counts()
 
 # 3) 이벤트 발생 요일 분포
+st.subheader("🌟 코인 이벤트 발생 요일 분포")
 df_coin_ev = pd.DataFrame({'weekday': weekdays, 'count':[coin_counts.get(d,0) for d in weekdays]})
 df_coin_ev['negative'] = -df_coin_ev['count']
-st.subheader("🌟 코인 이벤트 발생 요일 분포")
 chart_coin = alt.Chart(df_coin_ev).mark_bar(color='red').encode(
    x=alt.X('weekday:N', sort=weekdays, title='요일'),
    y=alt.Y('negative:Q', title='이벤트 횟수'),
@@ -196,10 +196,10 @@ st.line_chart(recent_coin.set_index('date')['Total_coins'])
 
 # 6) 코인 매출 향후 15일 예측
 st.subheader("🔮 코인 매출 향후 15일 예측")
-prophet_coin = df_coin_prophet.rename(columns={'ds':'ds','y':'y'})
+prophet_coin = df_coin_sel.rename(columns={'date':'ds','Total_coins':'y'})
 model_coin = Prophet()
 model_coin.add_country_holidays(country_name='DE')
-model_coin.fit(df_coin_prophet)
+model_coin.fit(prophet_coin)
 future_coin = model_coin.make_future_dataframe(periods=15)
 forecast_coin = model_coin.predict(future_coin)
 coin_fut15 = forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()]
