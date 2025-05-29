@@ -104,7 +104,17 @@ st.subheader("📈 결제 매출 최근 3개월 추이")
 recent_pay = df_pay[df_pay['date']>=df_pay['date'].max()-timedelta(days=90)]
 st.line_chart(recent_pay.set_index('date')['amount'])
 
-# 4) 이벤트 예정일 체크 및 적용
+# 4) 결제 매출 예측
+st.subheader("🔮 결제 매출 향후 7일 예측")
+prop_df = df_pay.rename(columns={'date':'ds','amount':'y'})
+model = Prophet()
+model.add_country_holidays(country_name='FR')
+model.fit(prop_df)
+fut = model.make_future_dataframe(periods=7)
+fc = model.predict(fut)
+st.line_chart(fc.set_index('ds')['yhat'])
+
+# 5) 이벤트 예정일 체크 및 적용
 st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
 evt_date = st.date_input("이벤트 가능성 있는 결제 날짜 선택", key="pay_evt")
 if st.button("결제 이벤트 적용", key="btn_evt_apply"):
@@ -120,19 +130,9 @@ if st.button("결제 이벤트 적용", key="btn_evt_apply"):
     else:
         st.warning("⚠️ 날짜 선택 필요")
 
-# 5) 첫 결제 추이
+# 6) 첫 결제 추이
 st.subheader("🚀 첫 결제 추이")
 st.line_chart(df_pay.set_index('date')['first_count'])
-
-# 6) 결제 매출 예측
-st.subheader("🔮 결제 매출 향후 7일 예측")
-prop_df = df_pay.rename(columns={'date':'ds','amount':'y'})
-model = Prophet()
-model.add_country_holidays(country_name='FR')
-model.fit(prop_df)
-fut = model.make_future_dataframe(periods=7)
-fc = model.predict(fut)
-st.line_chart(fc.set_index('ds')['yhat'])
 
 # -- 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
