@@ -19,7 +19,7 @@ engine = create_engine(
     f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}?sslmode=require"
 )
 
-# 데이터 로드
+# 데이터 로드 함수
 @st.cache_data
 def load_coin_data():
     df = pd.read_sql('SELECT date, "Title", "Total_coins" FROM fra_daily', con=engine)
@@ -49,7 +49,7 @@ weekdays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturda
 # -- 결제 매출 분석 --
 st.header("💳 결제 매출 분석")
 
-# 1) 결제 이벤트 임계치 설정
+# 1) 결제 임계치 설정
 if "pay_thresh" not in st.session_state:
     st.session_state.pay_thresh = 1.5
 st.subheader("⚙️ 이벤트 임계치 설정 (결제)")
@@ -86,7 +86,7 @@ st.altair_chart(chart_ev, use_container_width=True)
 st.subheader("💹 결제 이벤트 발생 시 요일별 평균 증가율")
 rates = []
 for d in weekdays:
-    sub = df_pay[(df_pay['weekday'] == d) & df_pay['event_flag']]
+    sub = df_pay[(df_pay['weekday'] == d) & (df_pay['event_flag'])]
     rate = (sub['amount'] / sub['rolling_avg']).mean() if not sub.empty else 0
     rates.append(rate)
 df_ev['rate'] = rates
@@ -115,7 +115,8 @@ pay_fut = forecast[forecast['ds'] > df_pay['date'].max()].copy()
 rate_map = dict(zip(df_ev['weekday'], df_ev['rate']))
 pay_fut['weekday'] = pay_fut['ds'].dt.day_name()
 pay_fut['yhat_event'] = pay_fut['yhat'] * (1 + pay_fut['weekday'].map(rate_map).fillna(0))
-# 차트 함수
+
+# 차트 함수 정의
 def plot_pay(apply_event=False):
     base = alt.Chart(pay_fut).mark_line(color='steelblue').encode(
         x=alt.X('ds:T', title='날짜'),
@@ -128,11 +129,9 @@ def plot_pay(apply_event=False):
         return (base + scenario).properties(height=300).interactive()
     return base.properties(height=300).interactive()
 
-# 시나리오 초기화
+# 7) 시나리오 적용/해제 버튼 및 렌더링
 if 'apply_event' not in st.session_state:
     st.session_state.apply_event = False
-
-# 시나리오 적용/해제 버튼
 apply_col, reset_col = st.columns(2)
 with apply_col:
     if st.button('시나리오 적용', key='btn_apply'):
@@ -140,11 +139,9 @@ with apply_col:
 with reset_col:
     if st.button('시나리오 해제', key='btn_reset'):
         st.session_state.apply_event = False
+st.altair_chart(plot_pay(st.session_state.apply_event), use_container_width=True)
 
-# 예측 차트 렌더링
-st.altair_chart(plot_pay(st.session_state.apply_event), use_container_width=True)(plot_pay(st.session_state.apply_event), use_container_width=True)
-
-# 7) 이벤트 예정일 체크 및 적용
+# 8) 이벤트 예정일 체크 및 적용
 st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
 evt_date = st.date_input("이벤트 날짜 선택", key='pay_evt')
 if st.button('결제 이벤트 적용', key='btn_evt'):
@@ -156,7 +153,7 @@ if st.button('결제 이벤트 적용', key='btn_evt'):
     else:
         st.warning("⚠️ 날짜 선택 필요")
 
-# 8) 첫 결제 추이
+# 9) 첫 결제 추이
 st.subheader("🚀 첫 결제 추이")
 st.line_chart(df_pay.set_index('date')['first_count'])
 
@@ -165,7 +162,7 @@ st.header("🪙 코인 매출 분석")
 options = ["전체 콘텐츠"] + sorted(coin_df['Title'])
 selected = st.selectbox("🔍 콘텐츠 선택", options)
 
-# 코인 임계치 설정
+# 10) 코인 임계치 설정
 if 'coin_thresh' not in st.session_state:
     st.session_state.coin_thresh = 1.2
 st.subheader("⚙️ 이벤트 임계치 설정 (코인)")
@@ -178,7 +175,7 @@ if st.button('코인 임계치 적용', key='btn_coin'):
     st.session_state.coin_thresh = th_coin / 100
 st.caption(f"현재 코인 이벤트 임계치: {int(st.session_state.coin_thresh*100)}%")
 
-# 코인 데이터 준비 및 이벤트 검출
+# 11) 코인 데이터 준비 및 이벤트 검출
 def get_coin_df():
     if selected == "전체 콘텐츠":
         return coin_df.groupby('date')['Total_coins'].sum().reset_index()
@@ -190,7 +187,7 @@ df_coin_sel['event_flag'] = df_coin_sel['Total_coins'] > df_coin_sel['rolling_av
 df_coin_sel['weekday'] = df_coin_sel['date'].dt.day_name()
 coin_counts = df_coin_sel[df_coin_sel['event_flag']]['weekday'].value_counts()
 
-# 코인 이벤트 발생 요일 분포
+# 12) 코인 이벤트 발생 요일 분포
 st.subheader("🌟 코인 이벤트 발생 요일 분포")
 df_ce = pd.DataFrame({ 'weekday': weekdays, 'count': [coin_counts.get(d, 0) for d in weekdays] })
 chart_ce = alt.Chart(df_ce).mark_bar(color='red').encode(
@@ -200,7 +197,7 @@ chart_ce = alt.Chart(df_ce).mark_bar(color='red').encode(
 ).properties(height=250)
 st.altair_chart(chart_ce, use_container_width=True)
 
-# 코인 요일별 평균 증가율
+# 13) 코인 요일별 평균 증가율
 st.subheader("💹 코인 이벤트 발생 시 요일별 평균 증가율")
 rates2 = []
 for d in weekdays:
@@ -215,14 +212,20 @@ chart_ce2 = alt.Chart(df_ce).mark_bar(color='orange').encode(
 ).properties(height=250)
 st.altair_chart(chart_ce2, use_container_width=True)
 
-# 최근 3개월 코인 매출 추이
+# 14) 최근 3개월 코인 매출 추이
 st.subheader(f"📈 '{selected}' 최근 3개월 코인 매출 추이")
-st.line_chart(df_coin_sel[df_coin_sel['date'] >= df_coin_sel['date'].max() - timedelta(days=90)].set_index('date')['Total_coins'])
+st.line_chart(
+    df_coin_sel[df_coin_sel['date'] >= df_coin_sel['date'].max() - timedelta(days=90)]
+        .set_index('date')['Total_coins']
+)
 
-# 코인 향후 15일 예측
+# 15) 코인 향후 15일 예측
 st.subheader("🔮 코인 매출 향후 15일 예측")
 prophet_coin = df_coin_sel.rename(columns={'date':'ds','Total_coins':'y'})
-model_coin = Prophet(); model_coin.add_country_holidays(country_name='DE'); model_coin.fit(prophet_coin)
+model_coin = Prophet()
+model_coin.add_country_holidays(country_name='DE')
+model_coin.fit(prophet_coin)
 future_coin = model_coin.make_future_dataframe(periods=15)
 forecast_coin = model_coin.predict(future_coin)
-st.line_chart(forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()].set_index('ds')['yhat'])
+coin_fut = forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()]
+st.line_chart(coin_fut.set_index('ds')['yhat'])
