@@ -115,7 +115,6 @@ pay_fut15 = pay_forecast[pay_forecast['ds'] > df_pay_sorted['date'].max()]
 st.line_chart(pay_fut15.set_index('ds')['yhat'])
 
 # 8) 이벤트 예정일 체크 및 적용 (결제)
- (결제)
 st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
 evt_date = st.date_input("이벤트 가능성 있는 결제 날짜 선택", key="pay_evt")
 if st.button("결제 이벤트 적용", key="btn_evt_apply"):
