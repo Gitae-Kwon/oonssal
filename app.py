@@ -114,48 +114,7 @@ st.subheader("📈 결제 매출 최근 3개월 추이")
 recent_pay = df_pay[df_pay['date'] >= df_pay['date'].max() - timedelta(days=90)]
 st.line_chart(recent_pay.set_index('date')['amount'])
 
-# 4) 첫 결제 추이
-st.subheader("🚀 첫 결제 추이")
-# count 컬럼이 1인 경우를 첫 결제로 간주
-first_pay = df_pay_raw.copy()
-# 만약 df_pay_raw에 count 칼럼이 있으면 필터링
-if 'count' in first_pay.columns:
-    fp = first_pay[first_pay['count'] == 1]
-    fp_trend = fp.groupby('date')['count'].sum().reset_index()
-    st.line_chart(fp_trend.set_index('date')['count'])
-else:
-    st.caption('❌ payment 테이블에 count 컬럼이 없습니다.')
-
-# 4) 첫 결제 추이
-st.subheader("🚀 첫 결제 추이")
-# load_payment_data에서 집계된 first_count 사용
-st.line_chart(df_pay.set_index("date")["first_count"]
-)
-
-# 5) 예측
-prophet_pay = df_pay_raw.rename(columns={'date':'ds','amount':'y'})
-model_pay = Prophet()
-model_pay.add_country_holidays(country_name='FR')
-model_pay.fit(prophet_pay)
-pay_future = model_pay.make_future_dataframe(periods=7)
-pay_forecast = model_pay.predict(pay_future)
-pay_fut7 = pay_forecast[pay_forecast['ds'] > df_pay_raw['date'].max()]
-st.subheader("🔮 결제 매출 향후 7일 예측")
-st.line_chart(pay_fut7.set_index('ds')['yhat'])
-
-# 5) 이벤트 예정일 체크 및 적용 (결제 전용)
-st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
-event_input = st.date_input("이벤트 가능성 있는 결제 날짜 선택", value=None, format="YYYY-MM-DD", key="pay_event_input")
-if st.button("결제 이벤트 적용", key="btn_pay_event") and event_input:
-    wd = event_input.strftime('%A')
-    total_days = df_pay[df_pay['weekday']==wd].shape[0]
-    cnt = pay_counts.get(wd,0)
-    rate = cnt/total_days if total_days>0 else 0
-    st.write(f"📈 과거 {wd} 결제 이벤트 비율: {rate:.1%}")
-    if event_input in pay_fut7['ds'].dt.date.tolist():
-        st.success(f"🚀 {event_input}은 결제 예측 기간에 포함됩니다.")
-    else:
-        st.warning("⚠️ 선택한 날짜가 결제 예측 기간에 포함되지 않습니다.")
+("⚠️ 선택한 날짜가 결제 예측 기간에 포함되지 않습니다.")
 elif st.button("결제 이벤트 적용", key="btn_pay_event_alt"):
     st.warning("⚠️ 먼저 날짜를 선택해주세요.")
 
