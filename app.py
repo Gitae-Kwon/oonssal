@@ -63,12 +63,12 @@ if st.button("결제 임계치 적용", key="btn_pay_thresh"):
 pay_thresh = st.session_state.pay_thresh
 st.caption(f"현재 결제 이벤트 임계치: {int(pay_thresh*100)}%")
 
-# 2) 데이터 준비 및 이벤트 검출
-df_pay_sorted = pay_df.sort_values("date").reset_index(drop=True)
-df_pay_sorted['rolling_avg'] = df_pay_sorted['amount'].rolling(window=7, center=True, min_periods=1).mean()
-df_pay_sorted['event_flag'] = df_pay_sorted['amount'] > df_pay_sorted['rolling_avg'] * pay_thresh
-df_pay_sorted['weekday'] = df_pay_sorted['date'].dt.day_name()
-pay_counts = df_pay_sorted[df_pay_sorted['event_flag']]['weekday'].value_counts()
+# 2) 결제 데이터 준비 및 이벤트 검출
+df_pay = pay_df.sort_values("date").reset_index(drop=True)
+df_pay['rolling_avg'] = df_pay['amount'].rolling(window=7, center=True, min_periods=1).mean()
+df_pay['event_flag'] = df_pay['amount'] > df_pay['rolling_avg'] * pay_thresh
+df_pay['weekday'] = df_pay['date'].dt.day_name()
+pay_counts = df_pay[df_pay['event_flag']]['weekday'].value_counts()
 
 # 3) 이벤트 발생 요일 분포
 st.subheader("🌟 결제 이벤트 발생 요일 분포")
@@ -84,7 +84,7 @@ st.altair_chart(chart1, use_container_width=True)
 st.subheader("💹 결제 이벤트 발생 시 요일별 평균 증가율")
 rates = []
 for d in weekdays:
-    sub = df_pay_sorted[(df_pay_sorted['weekday']==d)&(df_pay_sorted['event_flag'])]
+    sub = df_pay[(df_pay['weekday']==d)&(df_pay['event_flag'])]
     rates.append((sub['amount']/sub['rolling_avg']).mean() if not sub.empty else 0)
 df_pay_ev['rate'] = rates
 chart2 = alt.Chart(df_pay_ev).mark_bar(color='cyan').encode(
@@ -96,34 +96,38 @@ st.altair_chart(chart2, use_container_width=True)
 
 # 5) 최근 3개월 추이
 st.subheader("📈 결제 매출 최근 3개월 추이")
-recent_pay = df_pay_sorted[df_pay_sorted['date'] >= df_pay_sorted['date'].max() - timedelta(days=90)]
+recent_pay = df_pay[df_pay['date'] >= df_pay['date'].max() - timedelta(days=90)]
 st.line_chart(recent_pay.set_index('date')['amount'])
 
-# 6) 결제 매출 향후 15일 예측
+# 6) 결제 매출 향후 15일 예측 (시나리오 포함)
 st.subheader("🔮 결제 매출 향후 15일 예측")
-prophet_pay = df_pay_sorted.rename(columns={'date':'ds','amount':'y'})
+# Prophet 적합 및 예측
+prophet_pay = df_pay.rename(columns={'date':'ds','amount':'y'})
 model_pay = Prophet()
 model_pay.add_country_holidays(country_name='DE')
 model_pay.fit(prophet_pay)
 future_pay = model_pay.make_future_dataframe(periods=15)
-pay_forecast = model_pay.predict(future_pay)
-pay_fut15 = pay_forecast[pay_forecast['ds'] > df_pay_sorted['date'].max()]
+forecast = model_pay.predict(future_pay)
+pay_fut15 = forecast[forecast['ds'] > df_pay['date'].max()].copy()
+# 평일 이벤트 비율 매핑
+pay_rate_map = dict(zip(df_pay_ev['weekday'], df_pay_ev['rate']))
+pay_fut15['weekday'] = pay_fut15['ds'].dt.day_name()
+# 시나리오: yhat_adj = yhat * (1 + rate)
+pay_fut15['yhat_event'] = pay_fut15.apply(lambda r: r['yhat'] * (1 + pay_rate_map.get(r['weekday'], 0)), axis=1)
 
-# Altair로 기본 예측 라인 그리기
+# 기본 예측선
 base = alt.Chart(pay_fut15).mark_line(color='steelblue').encode(
     x=alt.X('ds:T', title='날짜'),
-    y=alt.Y('yhat:Q', title='예측 결제 매출')
+    y=alt.Y('yhat:Q', title='예측 결제 매출'),
+    tooltip=[alt.Tooltip('ds:T', title='날짜'), alt.Tooltip('yhat:Q', title='기본 예측')]
 )
-
-# 이벤트 선택 후 빨간 수직선 추가
-if 'pay_evt' in st.session_state and st.session_state.pay_evt:
-    rule_df = pd.DataFrame({'ds':[st.session_state.pay_evt]})
-    rule = alt.Chart(rule_df).mark_rule(color='red').encode(
-        x='ds:T'
-    )
-    chart = (base + rule).properties(height=300)
-else:
-    chart = base.properties(height=300)
+# 이벤트 시나리오 예측선
+scenario = alt.Chart(pay_fut15).mark_line(color='red').encode(
+    x='ds:T',
+    y=alt.Y('yhat_event:Q', title='이벤트 시나리오 예측'),
+    tooltip=[alt.Tooltip('ds:T', title='날짜'), alt.Tooltip('yhat_event:Q', title='시나리오 예측')]
+)
+chart = (base + scenario).properties(height=300).interactive()
 st.altair_chart(chart, use_container_width=True)
 
 # 7) 이벤트 예정일 체크 및 적용 (결제)
@@ -132,21 +136,15 @@ evt_date = st.date_input("이벤트 가능성 있는 결제 날짜 선택", key=
 if st.button("결제 이벤트 적용", key="btn_evt_apply"):
     if evt_date:
         wd = evt_date.strftime('%A')
-        total = df_pay_sorted[df_pay_sorted['weekday']==wd].shape[0]
-        cnt   = pay_counts.get(wd,0)
+        total = df_pay[df_pay['weekday']==wd].shape[0]
+        cnt = pay_counts.get(wd,0)
         st.write(f"📈 과거 {wd} 결제 이벤트 비율: {cnt/total:.1%}" if total>0 else "데이터 부족")
-
-        # ← 여기를 df_pay_sorted가 아니라 pay_fut15로 검사합니다.
-        if evt_date in pay_fut15['ds'].dt.date.tolist():
-            st.success(f"🚀 {evt_date}은 결제 예측 기간에 포함됩니다.")
-        else:
-            st.warning("⚠️ 선택 날짜 미포함")
     else:
         st.warning("⚠️ 날짜 선택 필요")
 
 # 8) 첫 결제 추이
 st.subheader("🚀 첫 결제 추이")
-st.line_chart(df_pay_sorted.set_index('date')['first_count'])
+st.line_chart(df_pay.set_index('date')['first_count'])
 
 # -- 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
@@ -220,5 +218,18 @@ model_coin.add_country_holidays(country_name='DE')
 model_coin.fit(prophet_coin)
 future_coin = model_coin.make_future_dataframe(periods=15)
 forecast_coin = model_coin.predict(future_coin)
-coin_fut15 = forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()]
-st.line_chart(coin_fut15.set_index('ds')['yhat'])
+coin_fut15 = forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()].copy()
+
+# 시나리오: 요일별 이벤트율을 곱한 예측
+df_coin_ev_map = dict(zip(df_coin_ev['weekday'], df_coin_ev['rate']))
+coin_fut15['weekday'] = coin_fut15['ds'].dt.day_name()
+coin_fut15['yhat_event'] = coin_fut15.apply(
+    lambda r: r['yhat']*(1 + df_coin_ev_map.get(r['weekday'],0)), axis=1
+)
+base_c = alt.Chart(coin_fut15).mark_line(color='steelblue').encode(
+    x='ds:T', y='yhat:Q', tooltip=['ds','yhat']
+)
+evt_c = alt.Chart(coin_fut15).mark_line(color='red').encode(
+    x='ds:T', y='yhat_event:Q', tooltip=['ds','yhat_event']
+)
+st.altair_chart((base_c+evt_c).properties(height=300).interactive(), use_container_width=True)
