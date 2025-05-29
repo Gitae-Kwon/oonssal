@@ -105,6 +105,18 @@ st.subheader("📈 결제 매출 최근 3개월 추이")
 recent_pay = df_pay[df_pay['date'] >= df_pay['date'].max() - timedelta(days=90)]
 st.line_chart(recent_pay.set_index('date')['amount'])
 
+# 4) 첫 결제 추이
+st.subheader("🚀 첫 결제 추이")
+# count 컬럼이 1인 경우를 첫 결제로 간주
+first_pay = df_pay_raw.copy()
+# 만약 df_pay_raw에 count 칼럼이 있으면 필터링
+if 'count' in first_pay.columns:
+    fp = first_pay[first_pay['count'] == 1]
+    fp_trend = fp.groupby('date')['count'].sum().reset_index()
+    st.line_chart(fp_trend.set_index('date')['count'])
+else:
+    st.caption('❌ payment 테이블에 count 컬럼이 없습니다.')
+
 # 4) 예측
 prophet_pay = df_pay_raw.rename(columns={'date':'ds','amount':'y'})
 model_pay = Prophet()
