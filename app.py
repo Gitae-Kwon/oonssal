@@ -128,11 +128,16 @@ def plot_pay(apply_event=False):
         return (base + scenario).properties(height=300).interactive()
     return base.properties(height=300).interactive()
 
-# 시나리오 적용 버튼
-if 'apply_event' not in st.session_state:
-    st.session_state.apply_event = False
-if st.button('시나리오 적용', key='btn_apply'):
-    st.session_state.apply_event = True
+# 시나리오 적용/해제 버튼
+apply_col, reset_col = st.columns(2)
+with apply_col:
+    if st.button('시나리오 적용', key='btn_apply'):
+        st.session_state.apply_event = True
+with reset_col:
+    if st.button('시나리오 해제', key='btn_reset'):
+        st.session_state.apply_event = False
+
+# 예측 차트 렌더링
 st.altair_chart(plot_pay(st.session_state.apply_event), use_container_width=True)
 
 # 7) 이벤트 예정일 체크 및 적용
