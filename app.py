@@ -108,7 +108,23 @@ model_pay.fit(prophet_pay)
 future_pay = model_pay.make_future_dataframe(periods=15)
 pay_forecast = model_pay.predict(future_pay)
 pay_fut15 = pay_forecast[pay_forecast['ds'] > df_pay_sorted['date'].max()]
-st.line_chart(pay_fut15.set_index('ds')['yhat'])
+
+# Altair로 기본 예측 라인 그리기
+base = alt.Chart(pay_fut15).mark_line(color='steelblue').encode(
+    x=alt.X('ds:T', title='날짜'),
+    y=alt.Y('yhat:Q', title='예측 결제 매출')
+)
+
+# 이벤트 선택 후 빨간 수직선 추가
+if 'pay_evt' in st.session_state and st.session_state.pay_evt:
+    rule_df = pd.DataFrame({'ds':[st.session_state.pay_evt]})
+    rule = alt.Chart(rule_df).mark_rule(color='red').encode(
+        x='ds:T'
+    )
+    chart = (base + rule).properties(height=300)
+else:
+    chart = base.properties(height=300)
+st.altair_chart(chart, use_container_width=True)
 
 # 7) 이벤트 예정일 체크 및 적용 (결제)
 st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
