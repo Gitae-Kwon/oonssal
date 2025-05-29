@@ -51,7 +51,7 @@ st.header("💳 결제 매출 분석")
 
 # 1) 임계치 설정 (결제)
 if "pay_thresh" not in st.session_state:
-    st.session_state.pay_thresh = 1.7
+    st.session_state.pay_thresh = 1.5
 st.subheader("⚙️ 이벤트 임계치 설정 (결제)")
 th_pay = st.number_input(
     "평균 대비 몇 % 이상일 때 결제 이벤트로 간주?",
@@ -99,11 +99,7 @@ st.subheader("📈 결제 매출 최근 3개월 추이")
 recent_pay = df_pay_sorted[df_pay_sorted['date'] >= df_pay_sorted['date'].max() - timedelta(days=90)]
 st.line_chart(recent_pay.set_index('date')['amount'])
 
-# 6) 첫 결제 추이
-st.subheader("🚀 첫 결제 추이")
-st.line_chart(df_pay_sorted.set_index('date')['first_count'])
-
-# 7) 결제 매출 향후 15일 예측
+# 6) 결제 매출 향후 15일 예측
 st.subheader("🔮 결제 매출 향후 15일 예측")
 prophet_pay = df_pay_sorted.rename(columns={'date':'ds','amount':'y'})
 model_pay = Prophet()
@@ -114,7 +110,7 @@ pay_forecast = model_pay.predict(future_pay)
 pay_fut15 = pay_forecast[pay_forecast['ds'] > df_pay_sorted['date'].max()]
 st.line_chart(pay_fut15.set_index('ds')['yhat'])
 
-# 8) 이벤트 예정일 체크 및 적용 (결제)
+# 7) 이벤트 예정일 체크 및 적용 (결제)
 st.subheader("🗓 결제 이벤트 예정일 체크 및 적용")
 evt_date = st.date_input("이벤트 가능성 있는 결제 날짜 선택", key="pay_evt")
 if st.button("결제 이벤트 적용", key="btn_evt_apply"):
@@ -130,6 +126,10 @@ if st.button("결제 이벤트 적용", key="btn_evt_apply"):
     else:
         st.warning("⚠️ 날짜 선택 필요")
 
+# 8) 첫 결제 추이
+st.subheader("🚀 첫 결제 추이")
+st.line_chart(df_pay_sorted.set_index('date')['first_count'])
+
 # -- 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
 # 콘텐츠 선택
@@ -138,7 +138,7 @@ selected = st.selectbox("🔍 콘텐츠 선택", options)
 
 # 1) 코인 임계치 설정
 if "coin_thresh" not in st.session_state:
-    st.session_state.coin_thresh = 1.7
+    st.session_state.coin_thresh = 1.2
 st.subheader("⚙️ 이벤트 임계치 설정 (코인)")
 th_coin = st.number_input(
     "평균 대비 몇 % 이상일 때 코인 이벤트로 간주?",
