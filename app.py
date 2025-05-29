@@ -28,7 +28,16 @@ def load_coin_data():
 
 @st.cache_data
 def load_payment_data():
-    df = pd.read_sql('SELECT date, SUM(amount) AS amount FROM payment GROUP BY date', con=engine)
+    # payment 테이블에서 일별 결제 금액과 첫 결제 건수 집계
+    query = '''
+    SELECT
+        date,
+        SUM(amount)     AS amount,
+        SUM(CASE WHEN count = 1 THEN 1 ELSE 0 END) AS first_count
+    FROM payment
+    GROUP BY date
+    '''
+    df = pd.read_sql(query, con=engine)
     df["date"] = pd.to_datetime(df["date"])
     return df
 
@@ -117,7 +126,13 @@ if 'count' in first_pay.columns:
 else:
     st.caption('❌ payment 테이블에 count 컬럼이 없습니다.')
 
-# 4) 예측
+# 4) 첫 결제 추이
+st.subheader("🚀 첫 결제 추이")
+# load_payment_data에서 집계된 first_count 사용
+st.line_chart(df_pay.set_index("date")["first_count"]
+)
+
+# 5) 예측
 prophet_pay = df_pay_raw.rename(columns={'date':'ds','amount':'y'})
 model_pay = Prophet()
 model_pay.add_country_holidays(country_name='FR')
