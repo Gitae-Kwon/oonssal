@@ -133,9 +133,11 @@ if st.button("결제 이벤트 적용", key="btn_evt_apply"):
     if evt_date:
         wd = evt_date.strftime('%A')
         total = df_pay_sorted[df_pay_sorted['weekday']==wd].shape[0]
-        cnt = pay_counts.get(wd,0)
+        cnt   = pay_counts.get(wd,0)
         st.write(f"📈 과거 {wd} 결제 이벤트 비율: {cnt/total:.1%}" if total>0 else "데이터 부족")
-        if evt_date in df_pay_sorted['date'].dt.date.tolist():
+
+        # ← 여기를 df_pay_sorted가 아니라 pay_fut15로 검사합니다.
+        if evt_date in pay_fut15['ds'].dt.date.tolist():
             st.success(f"🚀 {evt_date}은 결제 예측 기간에 포함됩니다.")
         else:
             st.warning("⚠️ 선택 날짜 미포함")
