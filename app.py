@@ -159,7 +159,7 @@ st.line_chart(df_pay.set_index('date')['first_count'])
 
 # -- 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
-options = ["전체 콘텐츠"] + sorted(coin_df['Title'])
+options = ["전체 콘텐츠"] + sorted(coin_df['Title'].unique())
 selected = st.selectbox("🔍 콘텐츠 선택", options)
 
 # 10) 코인 임계치 설정
