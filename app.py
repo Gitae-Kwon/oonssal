@@ -258,15 +258,20 @@ if st.button("결제 주기 계산"):
         joined = df_k.join(df_m, how='inner')
         # 주기 계산
         joined['days_diff'] = (joined['date_m'] - joined['date_k']).dt.days
+        # 평균/중앙값/최빈값 계산
         avg_cycle = joined['days_diff'].mean()
         median_cycle = joined['days_diff'].median()
-        # 최빈값 계산
         mode_vals = joined['days_diff'].mode()
         mode_cycle = mode_vals.iloc[0] if not mode_vals.empty else 0
-        # 금액 평균
-        avg_amount = joined[['amt_k','amt_m']].stack().mean()
+        # 금액 평균/중앙값/최빈값 계산
+        amt_series = joined[['amt_k','amt_m']].stack()
+        avg_amount = amt_series.mean()
+        median_amount = amt_series.median()
+        mode_amt_vals = amt_series.mode()
+        mode_amount = mode_amt_vals.iloc[0] if not mode_amt_vals.empty else 0
         # 결과 출력
-        st.success(f"평균 결제주기: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일")
+        st.success(f"결제주기 → 평균: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일")
+        st.success(f"결제금액 → 평균: {avg_amount:.1f} | 중앙값: {median_amount:.1f} | 최빈값: {mode_amount:.1f}")
         st.success(f"평균 결제금액: {avg_amount:.1f}")
     else:
         st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")("❗️ 시작일과 종료일을 모두 선택해주세요.")
