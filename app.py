@@ -199,6 +199,8 @@ if len(coin_date_range) == 2:
         st.session_state.coin_top_n = 10
     top_n = st.session_state.coin_top_n
 
+    total_period_coins = coin_sum.sum()
+
     # 데이터프레임 생성
     df_top = (
         coin_sum
@@ -251,7 +253,8 @@ if len(coin_date_range) == 2:
     #    CSS 로 감췄으니 보이지 않습니다)
     html = styled.to_html(index=False, escape=False)
 
-    st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
+    # Subheader 에 총합을 천 단위 콤마로 표시
+    st.subheader(f"📋 Top {top_n} 작품 (코인 사용량) {total_period_coins:,}")
     st.markdown(html, unsafe_allow_html=True)
 
     # 더보기 버튼
