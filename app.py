@@ -172,6 +172,29 @@ st.altair_chart(chart_first, use_container_width=True)
 # -- 2. 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
 
+# 2-0) 분석 기간 설정 및 Top N 작품
+col1, col2 = st.columns(2)
+with col1:
+    coin_date_range = st.date_input("코인 분석 기간 설정", [], key="coin_date_range")
+with col2:
+    if "coin_top_n" not in st.session_state:
+        st.session_state.coin_top_n = 10
+    if st.button("기간 적용", key="btn_coin_apply"):
+        st.session_state.coin_top_n = 10
+
+if coin_date_range and len(coin_date_range) == 2:
+    start_coin = pd.to_datetime(coin_date_range[0])
+    end_coin   = pd.to_datetime(coin_date_range[1])
+    df_coin_period = coin_df[(coin_df["date"] >= start_coin) & (coin_df["date"] <= end_coin)]
+    coin_sum = df_coin_period.groupby("Title")["Total_coins"].sum().sort_values(ascending=False)
+    top_n = st.session_state.coin_top_n
+    df_coin_top = coin_sum.head(top_n).reset_index(name="Total_coins")
+    st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
+    st.table(df_coin_top)
+    if len(coin_sum) > top_n:
+        if st.button("더보기", key="btn_coin_more"):
+            st.session_state.coin_top_n += 10
+            
 # 2-1) 콘텐츠 선택
 options = ["전체 콘텐츠"] + sorted(coin_df['Title'].unique())
 selected = st.selectbox("🔍 콘텐츠 선택", options)
