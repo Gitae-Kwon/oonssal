@@ -271,7 +271,7 @@ if st.button("결제 주기 계산"):
         mode_amount = mode_amt_vals.iloc[0] if not mode_amt_vals.empty else 0
         # 결과 출력
         st.success(f"결제주기 → 평균: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일")
-        st.success(f"결제금액 → 평균: {avg_amount:.1f} | 중앙값: {median_amount:.1f} | 최빈값: {mode_amount:.1f}")
+        st.success(f"결제금액 → 평균: {avg_amount:.2f} | 중앙값: {median_amount:.2f} | 최빈값: {mode_amount:.2f}")
 
     else:
         st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")("❗️ 시작일과 종료일을 모두 선택해주세요.")
