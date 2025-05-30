@@ -172,9 +172,6 @@ st.altair_chart(chart_first, use_container_width=True)
 # -- 2. 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
 
-# -- 2. 코인 매출 분석 --
-st.header("🪙 코인 매출 분석")
-
 # 2-0) 분석 기간 설정 및 Top N 작품
 coin_date_range = st.date_input(
     "코인 분석 기간 설정", [], key="coin_date_range"
@@ -221,7 +218,6 @@ if len(coin_date_range) == 2:
     styled = (
         df_top.style
               .apply(_highlight_new, axis=1)
-              .hide_index()
               .hide_columns(["launch_date", "is_new"])
     )
 
