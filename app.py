@@ -172,27 +172,63 @@ st.altair_chart(chart_first, use_container_width=True)
 # -- 2. 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
 
+# -- 2. 코인 매출 분석 --
+st.header("🪙 코인 매출 분석")
+
 # 2-0) 분석 기간 설정 및 Top N 작품
-coin_date_range = st.date_input("코인 분석 기간 설정", [], key="coin_date_range")
+coin_date_range = st.date_input(
+    "코인 분석 기간 설정", [], key="coin_date_range"
+)
+
 if len(coin_date_range) == 2:
     start_coin = pd.to_datetime(coin_date_range[0])
     end_coin   = pd.to_datetime(coin_date_range[1])
-    df_coin_period = coin_df[(coin_df["date"] >= start_coin) & (coin_df["date"] <= end_coin)]
-    coin_sum = df_coin_period.groupby("Title")["Total_coins"].sum().sort_values(ascending=False)
 
-    # Top N, 기본 10개, 계속 버튼으로 +10
+    # 기간 내 집계
+    df_period = coin_df[
+        (coin_df["date"] >= start_coin) &
+        (coin_df["date"] <= end_coin)
+    ]
+    coin_sum = df_period.groupby("Title")["Total_coins"].sum().sort_values(ascending=False)
+
+    # 전체 최초 런칭일(매출 발생일) 구하기
+    first_launch = coin_df.groupby("Title")["date"].min()
+
+    # Top N 기본 10개, 더보기로 +10씩
     if "coin_top_n" not in st.session_state:
         st.session_state.coin_top_n = 10
     top_n = st.session_state.coin_top_n
 
-    # 랭킹 컬럼 추가
-    df_coin_top = (coin_sum.head(top_n)
-                   .reset_index(name="Total_coins"))
-    df_coin_top.insert(0, 'Rank', range(1, len(df_coin_top)+1))
+    # 데이터프레임 생성
+    df_top = (
+        coin_sum.head(top_n)
+        .reset_index(name="Total_coins")
+    )
+    # 1부터 시작하는 랭크 추가
+    df_top.insert(0, "Rank", range(1, len(df_top) + 1))
+
+    # 런칭일과 신작 여부 계산
+    df_top["launch_date"] = df_top["Title"].map(first_launch)
+    df_top["is_new"]      = df_top["launch_date"] >= start_coin
+
+    # 스타일 함수: 신작은 노란색, 그 외는 기본 텍스트
+    def _highlight_new(row):
+        return [
+            "color: yellow" if (col == "Title" and row.is_new) else ""
+            for col in df_top.columns
+        ]
+
+    styled = (
+        df_top.style
+              .apply(_highlight_new, axis=1)
+              .hide_index()
+              .hide_columns(["launch_date", "is_new"])
+    )
 
     st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
-    st.table(df_coin_top)
+    st.dataframe(styled, use_container_width=True)
 
+    # 더보기 버튼
     if len(coin_sum) > top_n:
         if st.button("더보기", key="btn_coin_more"):
             st.session_state.coin_top_n += 10
