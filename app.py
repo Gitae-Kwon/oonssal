@@ -154,11 +154,20 @@ if st.button('결제 이벤트 적용', key='btn_evt'):
     else:
         st.warning("⚠️ 날짜 선택 필요")
 
-# 1-9) 첫 결제 추이
-st.subheader("🚀 첫 결제 추이")
-st.line_chart(df_pay.set_index('date')['first_count'])
+# 1-9) 첫 결제 추이 (최근 3개월)
+st.subheader("🚀 첫 결제 추이 (최근 3개월)")
+recent_first = df_pay[df_pay["date"] >= df_pay["date"].max() - timedelta(days=90)]
 
-
+chart_first = (
+    alt.Chart(recent_first)
+       .mark_line(point=True)
+       .encode(
+           x=alt.X("date:T", title="날짜"),
+           y=alt.Y("first_count:Q", title="첫 결제 건수")
+       )
+       .properties(height=300)
+)
+st.altair_chart(chart_first, use_container_width=True)
 
 # -- 2. 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
