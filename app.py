@@ -211,22 +211,33 @@ if len(coin_date_range) == 2:
     df_top["is_new"]      = df_top["launch_date"] >= start_coin
 
     # 화면에 보일 컬럼만 선택
-    df_display = df_top[["Rank","Title","Total_coins"]].copy()
+    df_display = df_top[["Rank","Title","Total_coins","launch_date"]].copy()
+    df_display = df_display.rename(columns={"launch_date":"Launch Date"})
 
-    # Title 컬럼에 신작일 경우 <span>으로 감싸 노란색 적용
-    def wrap_new(row):
-        if df_top.loc[row.name, "is_new"]:
-            return f"<span style='color:yellow'>{row['Title']}</span>"
-        else:
-            return row["Title"]
+    # 신작 강조 함수
+    def _highlight_new(row):
+        return [
+            "color: yellow" if (col == "Title" and df_top.loc[row.name, "is_new"]) else ""
+            for col in df_display.columns
+        ]
 
-    df_display["Title"] = df_display.apply(wrap_new, axis=1)
+    # 스타일링: 
+    # 1) Total_coins에 천 단위 콤마 적용 
+    # 2) 전체 셀 중앙 정렬 
+    styled = (
+        df_display.style
+                  .apply(_highlight_new, axis=1)
+                  .format({"Total_coins": "{:,}"})
+                  .set_table_styles([
+                      {"selector": "th", "props": [("text-align", "center")]},
+                      {"selector": "td", "props": [("text-align", "center")]}
+                  ])
+    )
 
-    # HTML 테이블로 렌더, index=False 로 인덱스 완전 제거
-    html = df_display.to_html(index=False, escape=False)
+html = styled.to_html(index=False, escape=False)
 
-    st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
-    st.markdown(html, unsafe_allow_html=True)
+st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
+st.markdown(html, unsafe_allow_html=True)
 
     # 더보기 버튼
     if len(coin_sum) > top_n:
