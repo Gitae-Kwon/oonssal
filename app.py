@@ -208,6 +208,14 @@ if len(coin_date_range) == 2:
     df_top["launch_date"] = df_top["Title"].map(first_launch)
     df_top["is_new"]      = df_top["launch_date"] >= start_coin
 
+    # 순서: 컬럼 제거 → 스타일링
+    df_display = df_top.drop(columns=["launch_date", "is_new"])
+
+    styled = (
+        df_display.style
+                  .apply(_highlight_new, axis=1)
+    )
+
     # 스타일 함수: 신작은 노란색, 그 외는 기본 텍스트
     def _highlight_new(row):
         return [
