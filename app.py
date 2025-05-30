@@ -242,7 +242,7 @@ if st.button("결제 주기 계산"):
     if len(date_range) == 2:
         start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
         # 원시 payment 로드
-        df_raw = pd.read_sql('SELECT user_id, count, date, amount FROM payment', con=engine)
+        df_raw = pd.read_sql('SELECT user_id, platform, count, date, amount FROM payment', con=engine)
         df_raw['date'] = pd.to_datetime(df_raw['date'])
         # 기간 및 count 필터링
         mask = (
@@ -251,8 +251,8 @@ if st.button("결제 주기 계산"):
         )
         df = df_raw.loc[mask, ['user_id','count','date','amount']]
         # 두 결제 분리
-        df_k = df[df['count']==k].set_index('user_id')[['date','amount']]
-        df_k.columns = ['date_k','amt_k']
+        df_k = df[df['count']==k].set_index('user_id')[['date','amount','platform']]
+        df_k = df_k.rename(columns={'date':'date_k','amount':'amt_k'})
         df_m = df[df['count']==m].set_index('user_id')[['date','amount']]
         df_m.columns = ['date_m','amt_m']
         joined = df_k.join(df_m, how='inner')
