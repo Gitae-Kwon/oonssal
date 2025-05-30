@@ -172,7 +172,7 @@ st.altair_chart(chart_first, use_container_width=True)
 # -- 2. 코인 매출 분석 --
 st.header("🪙 코인 매출 분석")
 
-# -- 2-0) 분석 기간 설정 및 Top N 작품 --
+# 2-0) 분석 기간 설정 및 Top N 작품
 coin_date_range = st.date_input("코인 분석 기간 설정", [], key="coin_date_range")
 
 if len(coin_date_range) == 2:
@@ -191,39 +191,39 @@ if len(coin_date_range) == 2:
         .sort_values(ascending=False)
     )
 
-    # 최초 런칭일 구하기
+    # 전체 최초 런칭일(매출 발생일) 구하기
     first_launch = coin_df.groupby("Title")["date"].min()
 
-    # Top N + 더보기
+    # Top N 기본 10개, 더보기로 +10씩
     if "coin_top_n" not in st.session_state:
         st.session_state.coin_top_n = 10
     top_n = st.session_state.coin_top_n
 
+    # 데이터프레임 생성
     df_top = (
         coin_sum
         .head(top_n)
         .reset_index(name="Total_coins")
     )
+    # 1부터 시작하는 랭크 추가
     df_top.insert(0, "Rank", range(1, len(df_top) + 1))
 
-    # 신작 여부
+    # 런칭일과 신작 여부 계산
     df_top["launch_date"] = df_top["Title"].map(first_launch)
     df_top["is_new"]      = df_top["launch_date"] >= start_coin
 
-    # 화면에 보일 컬럼만 선택
-    df_display = df_top[["Rank","Title","Total_coins","launch_date"]].copy()
-    df_display = df_display.rename(columns={"launch_date":"Launch Date"})
+    # 출력할 컬럼만 선택
+    df_display = df_top[["Rank", "Title", "Total_coins", "launch_date"]].copy()
+    df_display = df_display.rename(columns={"launch_date": "Launch Date"})
 
     # 신작 강조 함수
     def _highlight_new(row):
         return [
-            "color: yellow" if (col == "Title" and df_top.loc[row.name, "is_new"]) else ""
+            "color: yellow" if (col=="Title" and df_top.loc[row.name, "is_new"]) else ""
             for col in df_display.columns
         ]
 
-    # 스타일링: 
-    # 1) Total_coins에 천 단위 콤마 적용 
-    # 2) 전체 셀 중앙 정렬 
+    # 스타일 적용: 가운데 정렬 + 천단위 콤마 + 신작 노란색
     styled = (
         df_display.style
                   .apply(_highlight_new, axis=1)
@@ -234,15 +234,15 @@ if len(coin_date_range) == 2:
                   ])
     )
 
-html = styled.to_html(index=False, escape=False)
+    html = styled.to_html(index=False, escape=False)
 
-st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
-st.markdown(html, unsafe_allow_html=True)
+    st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
+    st.markdown(html, unsafe_allow_html=True)
 
     # 더보기 버튼
     if len(coin_sum) > top_n:
-    if st.button("더보기", key="btn_coin_more"):
-        st.session_state.coin_top_n += 10
+        if st.button("더보기", key="btn_coin_more"):
+            st.session_state.coin_top_n += 10
             
 # 2-1) 콘텐츠 선택
 options = ["전체 콘텐츠"] + sorted(coin_df['Title'].unique())
