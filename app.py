@@ -244,18 +244,28 @@ if st.button("결제 주기 계산"):
         # 원시 payment 로드
         df_raw = pd.read_sql('SELECT user_id, count, date, amount FROM payment', con=engine)
         df_raw['date'] = pd.to_datetime(df_raw['date'])
+        # 기간 및 count 필터링
         mask = (
-            (df_raw['date'] >= start) & (df_raw['date'] <= end) & (df_raw['count'].isin([k, m]))
+            (df_raw['date'] >= start) & (df_raw['date'] <= end) &
+            (df_raw['count'].isin([k, m]))
         )
         df = df_raw.loc[mask, ['user_id','count','date','amount']]
-        # k, m 분리
-        df_k = df[df['count']==k].set_index('user_id')[['date','amount']].rename(columns={'date':'date_k','amount':'amt_k'})
-        df_m = df[df['count']==m].set_index('user_id')[['date','amount']].rename(columns={'date':'date_m','amount':'amt_m'})
-        # inner join
+        # 두 결제 분리
+        df_k = df[df['count']==k].set_index('user_id')[['date','amount']]
+        df_k.columns = ['date_k','amt_k']
+        df_m = df[df['count']==m].set_index('user_id')[['date','amount']]
+        df_m.columns = ['date_m','amt_m']
         joined = df_k.join(df_m, how='inner')
+        # 주기 계산
         joined['days_diff'] = (joined['date_m'] - joined['date_k']).dt.days
         avg_cycle = joined['days_diff'].mean()
+        median_cycle = joined['days_diff'].median()
+        min_cycle = joined['days_diff'].min()
+        max_cycle = joined['days_diff'].max()
+        # 금액 평균
         avg_amount = joined[['amt_k','amt_m']].stack().mean()
-        st.success(f"결제주기: {avg_cycle:.1f}일 | 평균 결제금액: {avg_amount:.1f}")
+        # 결과 출력
+        st.success(f"평균 결제주기: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최소: {min_cycle:.1f}일 | 최대: {max_cycle:.1f}일")
+        st.success(f"평균 결제금액: {avg_amount:.1f}")
     else:
         st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")
