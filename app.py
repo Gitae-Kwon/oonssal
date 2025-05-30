@@ -186,7 +186,12 @@ if len(coin_date_range) == 2:
         (coin_df["date"] >= start_coin) &
         (coin_df["date"] <= end_coin)
     ]
-    coin_sum = df_period.groupby("Title")["Total_coins"].sum().sort_values(ascending=False)
+    coin_sum = (
+        df_period
+        .groupby("Title")["Total_coins"]
+        .sum()
+        .sort_values(ascending=False)
+    )
 
     # 전체 최초 런칭일(매출 발생일) 구하기
     first_launch = coin_df.groupby("Title")["date"].min()
@@ -198,7 +203,8 @@ if len(coin_date_range) == 2:
 
     # 데이터프레임 생성
     df_top = (
-        coin_sum.head(top_n)
+        coin_sum
+        .head(top_n)
         .reset_index(name="Total_coins")
     )
     # 1부터 시작하는 랭크 추가
@@ -208,25 +214,19 @@ if len(coin_date_range) == 2:
     df_top["launch_date"] = df_top["Title"].map(first_launch)
     df_top["is_new"]      = df_top["launch_date"] >= start_coin
 
-    # 순서: 컬럼 제거 → 스타일링
+    # 컬럼 제거 후 스타일링
     df_display = df_top.drop(columns=["launch_date", "is_new"])
+
+    def _highlight_new(row):
+        # 신작인 경우 Title 셀만 노란색
+        return [
+            "color: yellow" if (col == "Title" and df_top.loc[row.name, "is_new"]) else ""
+            for col in df_display.columns
+        ]
 
     styled = (
         df_display.style
                   .apply(_highlight_new, axis=1)
-    )
-
-    # 스타일 함수: 신작은 노란색, 그 외는 기본 텍스트
-    def _highlight_new(row):
-        return [
-            "color: yellow" if (col == "Title" and row.is_new) else ""
-            for col in df_top.columns
-        ]
-
-    styled = (
-        df_top.style
-              .apply(_highlight_new, axis=1)
-              .hide_columns(["launch_date", "is_new"])
     )
 
     st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
