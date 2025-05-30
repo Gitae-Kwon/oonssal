@@ -249,7 +249,7 @@ if st.button("결제 주기 계산"):
             (df_raw['date'] >= start) & (df_raw['date'] <= end) &
             (df_raw['count'].isin([k, m]))
         )
-        df = df_raw.loc[mask, ['user_id','count','date','amount']]
+        df = df_raw.loc[mask, ['user_id', 'platform', 'count','date','amount']]
         # 두 결제 분리
         df_k = df[df['count']==k].set_index('user_id')[['date','amount','platform']]
         df_k = df_k.rename(columns={'date':'date_k','amount':'amt_k'})
