@@ -238,40 +238,75 @@ with col2:
     k = st.number_input("첫 번째 결제 건수 (count)", min_value=1, value=2)
 with col3:
     m = st.number_input("두 번째 결제 건수 (count)", min_value=1, value=3)
+# -- 결제 주기 분석 --
+st.header("⏱ 결제 주기 & 평균 결제금액 계산")
+# 기간 설정
+col1, col2, col3 = st.columns(3)
+with col1:
+    date_range = st.date_input("기간 설정", [])
+with col2:
+    k = st.number_input("첫 번째 결제 건수 (count)", min_value=1, value=2)
+with col3:
+    m = st.number_input("두 번째 결제 건수 (count)", min_value=1, value=3)
+
 if st.button("결제 주기 계산"):
     if len(date_range) == 2:
         start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
-        # 원시 payment 로드
-        df_raw = pd.read_sql('SELECT user_id, platform, count, date, amount FROM payment', con=engine)
+        # raw payment 로드 (platform 포함)
+        df_raw = pd.read_sql(
+            'SELECT user_id, platform, count, date, amount FROM payment',
+            con=engine
+        )
         df_raw['date'] = pd.to_datetime(df_raw['date'])
+
         # 기간 및 count 필터링
         mask = (
-            (df_raw['date'] >= start) & (df_raw['date'] <= end) &
+            (df_raw['date'] >= start) &
+            (df_raw['date'] <= end) &
             (df_raw['count'].isin([k, m]))
         )
-        df = df_raw.loc[mask, ['user_id', 'platform', 'count','date','amount']]
+        df = df_raw.loc[mask, ['user_id','platform','count','date','amount']]
+
         # 두 결제 분리
-        df_k = df[df['count']==k].set_index('user_id')[['date','amount','platform']]
-        df_k = df_k.rename(columns={'date':'date_k','amount':'amt_k'})
-        df_m = df[df['count']==m].set_index('user_id')[['date','amount']]
+        df_k = (
+            df[df['count']==k]
+            .set_index('user_id')[['date','amount','platform']]
+            .rename(columns={'date':'date_k','amount':'amt_k'})
+        )
+        df_m = (
+            df[df['count']==m]
+            .set_index('user_id')[['date','amount']]
+        )
         df_m.columns = ['date_m','amt_m']
+
         joined = df_k.join(df_m, how='inner')
+
         # 주기 계산
         joined['days_diff'] = (joined['date_m'] - joined['date_k']).dt.days
-        # 평균/중앙값/최빈값 계산
-        avg_cycle = joined['days_diff'].mean()
-        median_cycle = joined['days_diff'].median()
-        mode_vals = joined['days_diff'].mode()
-        mode_cycle = mode_vals.iloc[0] if not mode_vals.empty else 0
-        # 금액 평균/중앙값/최빈값 계산
-        amt_series = joined[['amt_k','amt_m']].stack()
-        avg_amount = amt_series.mean()
+        avg_cycle   = joined['days_diff'].mean()
+        median_cycle= joined['days_diff'].median()
+        mode_cycle  = joined['days_diff'].mode().iloc[0] if not joined['days_diff'].mode().empty else 0
+
+        # 금액 통계
+        amt_series    = joined[['amt_k','amt_m']].stack()
+        avg_amount    = amt_series.mean()
         median_amount = amt_series.median()
-        mode_amt_vals = amt_series.mode()
-        mode_amount = mode_amt_vals.iloc[0] if not mode_amt_vals.empty else 0
+        mode_amount   = amt_series.mode().iloc[0] if not amt_series.mode().empty else 0
+
         # 결과 출력
-        st.success(f"결제주기 → 평균: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일")
-        st.success(f"결제금액 → 평균: {avg_amount:.2f} | 중앙값: {median_amount:.2f} | 최빈값: {mode_amount:.2f}")
+        st.success(
+            f"결제주기 → 평균: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일\n"
+            f"결제금액 → 평균: {avg_amount:.2f} | 중앙값: {median_amount:.2f} | 최빈값: {mode_amount:.2f}"
+        )
+
+        # 플랫폼 분포
+        plat_counts = joined['platform'].value_counts()
+        total_plat  = plat_counts.sum()
+        plat_parts  = [
+            f"{plat}: {cnt}건 ({cnt/total_plat:.1%})"
+            for plat, cnt in plat_counts.items()
+        ]
+        st.success("플랫폼 분포 → " + ", ".join(plat_parts))
 
     else:
-        st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")("❗️ 시작일과 종료일을 모두 선택해주세요.")
+        st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")
