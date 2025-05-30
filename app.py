@@ -222,10 +222,40 @@ st.line_chart(
 # 15) 코인 향후 15일 예측
 st.subheader("🔮 코인 매출 향후 15일 예측")
 prophet_coin = df_coin_sel.rename(columns={'date':'ds','Total_coins':'y'})
-model_coin = Prophet()
-model_coin.add_country_holidays(country_name='DE')
-model_coin.fit(prophet_coin)
+model_coin = Prophet(); model_coin.add_country_holidays(country_name='DE'); model_coin.fit(prophet_coin)
 future_coin = model_coin.make_future_dataframe(periods=15)
 forecast_coin = model_coin.predict(future_coin)
 coin_fut = forecast_coin[forecast_coin['ds'] > df_coin_sel['date'].max()]
 st.line_chart(coin_fut.set_index('ds')['yhat'])
+
+# -- 결제 주기 분석 --
+st.header("⏱ 결제 주기 & 평균 결제금액 계산")
+# 기간 설정
+col1, col2, col3 = st.columns(3)
+with col1:
+    date_range = st.date_input("기간 설정", [])
+with col2:
+    k = st.number_input("비교할 첫 번째 결제 건수 (count)", min_value=1, value=2)
+with col3:
+    m = st.number_input("비교할 두 번째 결제 건수 (count)", min_value=1, value=3)
+if st.button("결제 주기 계산"):
+    if len(date_range) == 2:
+        start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
+        # 원시 payment 로드
+        df_raw = pd.read_sql('SELECT user_id, count, date, amount FROM payment', con=engine)
+        df_raw['date'] = pd.to_datetime(df_raw['date'])
+        mask = (
+            (df_raw['date'] >= start) & (df_raw['date'] <= end) & (df_raw['count'].isin([k, m]))
+        )
+        df = df_raw.loc[mask, ['user_id','count','date','amount']]
+        # k, m 분리
+        df_k = df[df['count']==k].set_index('user_id')[['date','amount']].rename(columns={'date':'date_k','amount':'amt_k'})
+        df_m = df[df['count']==m].set_index('user_id')[['date','amount']].rename(columns={'date':'date_m','amount':'amt_m'})
+        # inner join
+        joined = df_k.join(df_m, how='inner')
+        joined['days_diff'] = (joined['date_m'] - joined['date_k']).dt.days
+        avg_cycle = joined['days_diff'].mean()
+        avg_amount = joined[['amt_k','amt_m']].stack().mean()
+        st.success(f"결제주기: {avg_cycle:.1f}일 | 평균 결제금액: {avg_amount:.1f}")
+    else:
+        st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")
