@@ -216,24 +216,39 @@ if len(coin_date_range) == 2:
     df_display = df_top[["Rank", "Title", "Total_coins", "launch_date"]].copy()
     df_display = df_display.rename(columns={"launch_date": "Launch Date"})
 
-    # 신작 강조 함수
+    # 1) Launch Date 컬럼을 'YYYY-MM-DD' 문자열로 포맷
+    df_display["Launch Date"] = pd.to_datetime(df_display["Launch Date"]) \
+                                    .dt.strftime("%Y-%m-%d")
+    
+    # 1) Launch Date 컬럼을 'YYYY-MM-DD' 문자열로 포맷
+    df_display["Launch Date"] = pd.to_datetime(df_display["Launch Date"]) \
+                                    .dt.strftime("%Y-%m-%d")
+
+    # 2) 신작 강조 함수 (노란색)
     def _highlight_new(row):
         return [
             "color: yellow" if (col=="Title" and df_top.loc[row.name, "is_new"]) else ""
             for col in df_display.columns
         ]
 
-    # 스타일 적용: 가운데 정렬 + 천단위 콤마 + 신작 노란색
+    # 3) 스타일링: 가운데 정렬 + 천단위 콤마 + 인덱스 열 숨김
     styled = (
         df_display.style
                   .apply(_highlight_new, axis=1)
                   .format({"Total_coins": "{:,}"})
                   .set_table_styles([
-                      {"selector": "th", "props": [("text-align", "center")]},
-                      {"selector": "td", "props": [("text-align", "center")]}
+                      # 헤더/데이터 가운데 정렬
+                      {"selector": "th", "props":[("text-align","center")]},
+                      {"selector": "td", "props":[("text-align","center")]},
+                      # 이 두 줄을 추가해서 Pandas가 생성하는
+                      # 빈 인덱스 열( row_heading / blank )을 숨깁니다
+                      {"selector": "th.row_heading, th.blank", 
+                       "props":[("display","none")]},
                   ])
     )
 
+    # 4) HTML 로 렌더링 (index=False 해도 row_heading 이 남는데,
+    #    CSS 로 감췄으니 보이지 않습니다)
     html = styled.to_html(index=False, escape=False)
 
     st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
