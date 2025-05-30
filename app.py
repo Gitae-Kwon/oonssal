@@ -230,7 +230,13 @@ if len(coin_date_range) == 2:
     )
 
     st.subheader(f"📋 Top {top_n} 작품 (코인 사용량)")
-    st.dataframe(styled, use_container_width=True)
+    st.write(
+        df_display
+          .style
+          .apply(_highlight_new, axis=1)
+          .to_html(index=False, escape=False),
+        unsafe_allow_html=True
+    )
 
     # 더보기 버튼
     if len(coin_sum) > top_n:
