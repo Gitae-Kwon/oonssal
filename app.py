@@ -241,8 +241,8 @@ st.markdown(html, unsafe_allow_html=True)
 
     # 더보기 버튼
     if len(coin_sum) > top_n:
-        if st.button("더보기", key="btn_coin_more"):
-            st.session_state.coin_top_n += 10
+    if st.button("더보기", key="btn_coin_more"):
+        st.session_state.coin_top_n += 10
             
 # 2-1) 콘텐츠 선택
 options = ["전체 콘텐츠"] + sorted(coin_df['Title'].unique())
