@@ -235,9 +235,9 @@ col1, col2, col3 = st.columns(3)
 with col1:
     date_range = st.date_input("기간 설정", [])
 with col2:
-    k = st.number_input("비교할 첫 번째 결제 건수 (count)", min_value=1, value=2)
+    k = st.number_input("첫 번째 결제 건수 (count)", min_value=1, value=2)
 with col3:
-    m = st.number_input("비교할 두 번째 결제 건수 (count)", min_value=1, value=3)
+    m = st.number_input("두 번째 결제 건수 (count)", min_value=1, value=3)
 if st.button("결제 주기 계산"):
     if len(date_range) == 2:
         start, end = pd.to_datetime(date_range[0]), pd.to_datetime(date_range[1])
@@ -260,12 +260,13 @@ if st.button("결제 주기 계산"):
         joined['days_diff'] = (joined['date_m'] - joined['date_k']).dt.days
         avg_cycle = joined['days_diff'].mean()
         median_cycle = joined['days_diff'].median()
-        min_cycle = joined['days_diff'].min()
-        max_cycle = joined['days_diff'].max()
+        # 최빈값 계산
+        mode_vals = joined['days_diff'].mode()
+        mode_cycle = mode_vals.iloc[0] if not mode_vals.empty else 0
         # 금액 평균
         avg_amount = joined[['amt_k','amt_m']].stack().mean()
         # 결과 출력
-        st.success(f"평균 결제주기: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최소: {min_cycle:.1f}일 | 최대: {max_cycle:.1f}일")
+        st.success(f"평균 결제주기: {avg_cycle:.1f}일 | 중앙값: {median_cycle:.1f}일 | 최빈값: {mode_cycle:.1f}일")
         st.success(f"평균 결제금액: {avg_amount:.1f}")
     else:
-        st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")
+        st.error("❗️ 시작일과 종료일을 모두 선택해주세요.")("❗️ 시작일과 종료일을 모두 선택해주세요.")
